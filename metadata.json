@@ -1,0 +1,6 @@
+{
+  "name": "Spotify Web Controls for Firefox Android",
+  "description": "WebExtension and developer suite to integrate Spotify Web Player with Android media controls (Previous, Next, Play/Pause, Seek)",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,65 @@
+{
+  "manifest_version": 3,
+  "name": "Spotify Web Controls (Firefox Android)",
+  "version": "1.0.0",
+  "description": "Exposes Previous, Next, Seek, and Play/Pause to Android media notifications from Spotify Web Player.",
+  "author": "Spotify Web Controls Project",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "spotify-web-controls@firefox-android.local",
+      "strict_min_version": "109.0"
+    }
+  },
+  "permissions": [
+    "storage"
+  ],
+  "host_permissions": [
+    "https://open.spotify.com/*"
+  ],
+  "background": {
+    "scripts": ["background/background.js"]
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://open.spotify.com/*"
+      ],
+      "js": [
+        "content/media-session.js",
+        "content/spotify.js"
+      ],
+      "run_at": "document_start"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "content/bridge.js",
+        "icons/icon-48.png",
+        "icons/icon-96.png",
+        "icons/icon-128.png"
+      ],
+      "matches": [
+        "https://open.spotify.com/*"
+      ]
+    }
+  ],
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_title": "Spotify Web Controls",
+    "default_icon": {
+      "48": "icons/icon-48.png",
+      "96": "icons/icon-96.png",
+      "128": "icons/icon-128.png"
+    }
+  },
+  "options_ui": {
+    "page": "options/options.html",
+    "open_in_tab": true
+  },
+  "icons": {
+    "48": "icons/icon-48.png",
+    "96": "icons/icon-96.png",
+    "128": "icons/icon-128.png"
+  }
+}

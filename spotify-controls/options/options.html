@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Spotify Web Controls - Settings</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <div class="options-container">
+    <header class="header">
+      <div class="brand">
+        <div class="logo-circle"></div>
+        <div>
+          <h1>Spotify Web Controls</h1>
+          <p class="subtitle">Firefox Android Media Integration Settings</p>
+        </div>
+      </div>
+      <span class="version-badge">v1.0.0</span>
+    </header>
+
+    <main class="settings-card">
+      <section class="section">
+        <h2>General Integration</h2>
+        <div class="option-row">
+          <div class="option-info">
+            <label for="opt-extension-enabled" class="option-title">Enable extension</label>
+            <p class="option-desc">Enables DOM scanning, player control, and background communication.</p>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="opt-extension-enabled">
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="option-row">
+          <div class="option-info">
+            <label for="opt-notification" class="option-title">Enable notification integration</label>
+            <p class="option-desc">Synchronizes track metadata and buttons with Android MediaSession and lock-screen widget.</p>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="opt-notification">
+            <span class="slider"></span>
+          </label>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>Playback Capabilities</h2>
+        <div class="option-row">
+          <div class="option-info">
+            <label for="opt-seek" class="option-title">Enable seek controls</label>
+            <p class="option-desc">Permits forward and backward seeking (+15s / -15s) and position scrubbing via Spotify's progress slider.</p>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="opt-seek">
+            <span class="slider"></span>
+          </label>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>Developer & Diagnostics</h2>
+        <div class="option-row">
+          <div class="option-info">
+            <label for="opt-debug" class="option-title">Enable debug logging</label>
+            <p class="option-desc">Outputs detailed <code>[Spotify Controls]</code> telemetry to WebIDE / Remote DevTools console. Contains zero sensitive data.</p>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="opt-debug">
+            <span class="slider"></span>
+          </label>
+        </div>
+      </section>
+
+      <div class="actions-bar">
+        <button id="btn-save" class="btn-primary">Save Settings</button>
+        <span id="save-status" class="save-status"></span>
+      </div>
+    </main>
+
+    <section class="diagnostic-box">
+      <h3>Remote Debug Helper</h3>
+      <p>To inspect real-time state from your computer via USB or Wi-Fi remote debugging:</p>
+      <ol>
+        <li>Navigate to <code>about:debugging</code> in Firefox Desktop.</li>
+        <li>Connect Firefox Android and inspect the <code>open.spotify.com</code> tab.</li>
+        <li>Run <code>window.__spotifyControlsDebug()</code> in the console.</li>
+      </ol>
+      <button id="btn-run-local-diag" class="btn-secondary">Check Background Status</button>
+      <pre id="diag-output" class="diag-output hidden"></pre>
+    </section>
+  </div>
+
+  <script src="options.js"></script>
+</body>
+</html>

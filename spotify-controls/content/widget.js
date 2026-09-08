@@ -165,10 +165,12 @@
     el.title = label;
     el.textContent = text;
     if (className) el.className = className;
-    el.addEventListener('click', () => {
-      execute(action, details);
-      setTimeout(update, 80);
-    });
+    if (className !== 'primary') {
+      el.addEventListener('click', () => {
+        execute(action, details);
+        setTimeout(update, 80);
+      });
+    }
     return el;
   }
 
@@ -290,11 +292,10 @@
     play.textContent = state.playbackState === 'playing' ? '❚❚' : '▶';
 
     const playAction = state.playbackState === 'playing' ? 'pause' : 'play';
-    play.onclick = null;
-    play.addEventListener('click', () => {
+    play.onclick = () => {
       execute(playAction);
       setTimeout(update, 80);
-    }, { once: true });
+    };
   }
 
   function start() {

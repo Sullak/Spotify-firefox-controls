@@ -1,6 +1,6 @@
 /**
  * Spotify Web Controls - MAIN World Bridge Script
- * 
+ *
  * Runs directly in the context of open.spotify.com (MAIN world).
  * This is necessary because Firefox Android's GeckoView links the native
  * Android Notification MediaSession to the page's main execution context
@@ -18,14 +18,39 @@
   const CHANNEL = 'SPOTIFY_WEB_CONTROLS_CHANNEL';
   const SOURCE_BRIDGE = 'spotify-controls-bridge';
   const SOURCE_CONTENT = 'spotify-controls-content';
+  const MEDIA_SESSION_ACTIONS = [
+    'play',
+    'pause',
+    'nexttrack',
+    'previoustrack',
+    'seekforward',
+    'seekbackward',
+    'seekto',
+    'stop'
+  ];
 
   let debugEnabled = true;
   let seekControlsEnabled = true;
   let notificationIntegrationEnabled = true;
 
   const registeredHandlers = new Map();
+  const mediaSessionDiagnostics = {};
   let lastCapturedMetadata = null;
   let lastPlaybackState = 'none';
+
+  MEDIA_SESSION_ACTIONS.forEach(action => {
+    mediaSessionDiagnostics[action] = {
+      supported: null,
+      handlerRegistered: false,
+      registrationAttempts: 0,
+      callbacksReceived: 0,
+      lastReceivedAt: null,
+      lastDetails: null,
+      controllerDispatches: 0,
+      lastControllerResult: null,
+      lastControllerResultAt: null
+    };
+  });
 
   function log(...args) {
     if (debugEnabled) {
@@ -47,14 +72,37 @@
     }, '*');
   }
 
+  function recordActionReceived(actionName, details) {
+    const diagnostic = mediaSessionDiagnostics[actionName];
+    if (!diagnostic) return;
+    diagnostic.callbacksReceived += 1;
+    diagnostic.lastReceivedAt = new Date().toISOString();
+    diagnostic.lastDetails = details || {};
+  }
+
+  function recordControllerDispatch(actionName) {
+    const diagnostic = mediaSessionDiagnostics[actionName];
+    if (!diagnostic) return;
+    diagnostic.controllerDispatches += 1;
+  }
+
+  function recordControllerResult(actionName, success) {
+    const diagnostic = mediaSessionDiagnostics[actionName];
+    if (!diagnostic) return;
+    diagnostic.lastControllerResult = Boolean(success);
+    diagnostic.lastControllerResultAt = new Date().toISOString();
+  }
+
   /**
    * Action executor within the page context.
    * Dispatches command back to content script or attempts DOM action directly.
    */
   function handleMediaAction(actionName, details = {}) {
     log(`Action received from Android/Firefox MediaSession: ${actionName}`, details);
-    
+    recordActionReceived(actionName, details);
+
     // Notify content script to execute DOM action
+    recordControllerDispatch(actionName);
     sendToContent('TRIGGER_PLAYER_ACTION', {
       action: actionName,
       details: details
@@ -96,25 +144,23 @@
     const ms = navigator.mediaSession;
     const originalSetActionHandler = ms.setActionHandler.bind(ms);
 
-    const MANDATORY_ACTIONS = [
-      'play',
-      'pause',
-      'previoustrack',
-      'nexttrack',
-      'seekbackward',
-      'seekforward',
-      'seekto',
-      'stop'
-    ];
-
     // Wrap setActionHandler
     ms.setActionHandler = function (action, handler) {
+      const diagnostic = mediaSessionDiagnostics[action];
+      if (diagnostic) {
+        diagnostic.registrationAttempts += 1;
+      }
+
       log(`Spotify page called setActionHandler('${action}', ${handler ? 'function' : 'null'})`);
-      
+
       if (handler) {
         registeredHandlers.set(action, handler);
       } else {
         registeredHandlers.delete(action);
+      }
+
+      if (diagnostic) {
+        diagnostic.handlerRegistered = Boolean(handler);
       }
 
       // If Spotify tries to nullify or we want to guarantee Android notification buttons:
@@ -124,6 +170,11 @@
 
       try {
         originalSetActionHandler(action, function (details) {
+          if (diagnostic) {
+            diagnostic.callbacksReceived += 1;
+            diagnostic.lastReceivedAt = new Date().toISOString();
+            diagnostic.lastDetails = details || {};
+          }
           log(`MediaSession callback executed for: ${action}`);
           // If Spotify provided a handler, invoke it
           if (handler) {
@@ -136,19 +187,37 @@
           // Always ensure our extension logic also executes
           handleMediaAction(action, details);
         });
+        if (diagnostic) {
+          diagnostic.supported = true;
+        }
       } catch (err) {
+        if (diagnostic) {
+          diagnostic.supported = false;
+        }
         log(`Warning: Failed to set handler for action '${action}':`, err.message);
       }
     };
 
     // Forcefully register all mandatory actions right away
-    MANDATORY_ACTIONS.forEach(action => {
+    MEDIA_SESSION_ACTIONS.forEach(action => {
       try {
         originalSetActionHandler(action, function (details) {
+          const diagnostic = mediaSessionDiagnostics[action];
+          if (diagnostic) {
+            diagnostic.callbacksReceived += 1;
+            diagnostic.lastReceivedAt = new Date().toISOString();
+            diagnostic.lastDetails = details || {};
+          }
           handleMediaAction(action, details);
         });
+        mediaSessionDiagnostics[action].supported = true;
+        mediaSessionDiagnostics[action].handlerRegistered = true;
+        mediaSessionDiagnostics[action].registrationAttempts += 1;
         log(`Registered persistent handler for: ${action}`);
       } catch (err) {
+        mediaSessionDiagnostics[action].supported = false;
+        mediaSessionDiagnostics[action].handlerRegistered = false;
+        mediaSessionDiagnostics[action].registrationAttempts += 1;
         log(`Could not register initial handler for '${action}':`, err.message);
       }
     });
@@ -253,6 +322,11 @@
         syncMediaSession(payload);
         break;
 
+      case 'CONTROLLER_RESULT':
+        recordControllerResult(payload.action, payload.success);
+        log(`Spotify controller result: ${payload.action} => ${payload.success ? 'success' : 'failed'}`);
+        break;
+
       case 'UPDATE_CONFIG':
         if (payload.debugEnabled !== undefined) debugEnabled = payload.debugEnabled;
         if (payload.seekControlsEnabled !== undefined) seekControlsEnabled = payload.seekControlsEnabled;
@@ -274,30 +348,68 @@
       paused: a.paused,
       currentTime: a.currentTime,
       duration: a.duration,
+      readyState: a.readyState,
       muted: a.muted,
       src: a.src ? (a.src.substring(0, 30) + '...') : '(empty/blob)'
     }));
+
+    const findButton = (selectors) => {
+      for (const selector of selectors) {
+        try {
+          const element = document.querySelector(selector);
+          if (element) {
+            return {
+              found: true,
+              disabled: Boolean(element.disabled),
+              ariaLabel: element.getAttribute('aria-label'),
+              title: element.getAttribute('title'),
+              testId: element.getAttribute('data-testid')
+            };
+          }
+        } catch (e) {}
+      }
+      return { found: false };
+    };
+
+    const spotifyControls = {
+      nextButton: findButton([
+        '[data-testid="control-button-skip-forward"]',
+        'button[aria-label="Next" i]',
+        'button[aria-label="Siguiente" i]',
+        'button[aria-label*="Next" i]',
+        'button[aria-label*="Siguiente" i]',
+        'button[title="Next" i]'
+      ]),
+      previousButton: findButton([
+        '[data-testid="control-button-skip-back"]',
+        'button[aria-label="Previous" i]',
+        'button[aria-label="Anterior" i]',
+        'button[aria-label*="Previous" i]',
+        'button[aria-label*="Anterior" i]',
+        'button[title="Previous" i]'
+      ])
+    };
 
     return {
       name: 'Spotify Web Controls (Bridge Diagnostic)',
       timestamp: new Date().toISOString(),
       spotifyDetected: window.location.hostname.includes('spotify.com'),
       mediaSessionAvailable: msAvailable,
-      playbackState: msAvailable ? navigator.mediaSession.playbackState : 'N/A',
+      mediaSession: msAvailable ? {
+        playbackState: navigator.mediaSession.playbackState,
+        supportedActions: MEDIA_SESSION_ACTIONS.reduce((result, action) => {
+          result[action] = mediaSessionDiagnostics[action].supported;
+          return result;
+        }, {}),
+        actions: JSON.parse(JSON.stringify(mediaSessionDiagnostics))
+      } : null,
       currentMetadata: lastCapturedMetadata,
-      audioElementsCount: audioElements.length,
-      audioElements: audioElements,
+      audio: {
+        count: audioElements.length,
+        elements: audioElements
+      },
+      spotifyControls,
       activeHandlers: Array.from(registeredHandlers.keys()),
-      supportedActions: [
-        'play',
-        'pause',
-        'previoustrack',
-        'nexttrack',
-        'seekbackward',
-        'seekforward',
-        'seekto',
-        'stop'
-      ],
       config: {
         debugEnabled,
         seekControlsEnabled,

@@ -26,7 +26,8 @@
       ],
       "js": [
         "content/media-session.js",
-        "content/spotify.js"
+        "content/spotify.js",
+        "content/widget.js"
       ],
       "run_at": "document_start"
     }

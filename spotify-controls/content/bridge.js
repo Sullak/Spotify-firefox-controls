@@ -99,7 +99,6 @@
    */
   function handleMediaAction(actionName, details = {}) {
     log(`Action received from Android/Firefox MediaSession: ${actionName}`, details);
-    recordActionReceived(actionName, details);
 
     // Notify content script to execute DOM action
     recordControllerDispatch(actionName);
@@ -418,10 +417,5 @@
     };
   };
 
-  // Initialize Media Session hook
   setupMediaSessionInterception();
-  log('Spotify Controls Bridge successfully injected into MAIN world.');
-
-  // Inform content script that bridge is ready
-  sendToContent('BRIDGE_READY', { initialized: true });
 })();

@@ -20,7 +20,6 @@
   let root = null;
   let panel = null;
   let expanded = false;
-  let pollTimer = null;
   let lastStateKey = '';
 
   function controllerReady() {
@@ -53,9 +52,7 @@
         color: #fff;
         user-select: none;
       }
-
       #${WIDGET_ID} * { box-sizing: border-box; }
-
       #${WIDGET_ID} button {
         appearance: none;
         border: 0;
@@ -66,10 +63,8 @@
         -webkit-tap-highlight-color: transparent;
         touch-action: manipulation;
       }
-
       #${WIDGET_ID} button:active { transform: scale(.94); }
       #${WIDGET_ID} button:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
-
       #${WIDGET_ID}-toggle {
         width: 52px;
         height: 52px;
@@ -79,7 +74,6 @@
         font-size: 25px;
         box-shadow: 0 3px 16px rgba(0,0,0,.45);
       }
-
       #${PANEL_ID} {
         width: min(340px, calc(100vw - 24px));
         margin-bottom: 9px;
@@ -89,14 +83,12 @@
         box-shadow: 0 8px 28px rgba(0,0,0,.5);
         backdrop-filter: blur(10px);
       }
-
       #${WIDGET_ID}-info {
         display: flex;
         align-items: center;
         min-width: 0;
         margin-bottom: 10px;
       }
-
       #${WIDGET_ID}-art {
         width: 48px;
         height: 48px;
@@ -105,22 +97,15 @@
         object-fit: cover;
         background: #333;
       }
-
-      #${WIDGET_ID}-text {
-        min-width: 0;
-        margin-left: 10px;
-      }
-
+      #${WIDGET_ID}-text { min-width: 0; margin-left: 10px; }
       #${WIDGET_ID}-title,
       #${WIDGET_ID}-artist {
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
       }
-
       #${WIDGET_ID}-title { font-size: 14px; font-weight: 700; }
       #${WIDGET_ID}-artist { margin-top: 2px; font-size: 12px; opacity: .7; }
-
       #${WIDGET_ID}-progress {
         width: 100%;
         height: 5px;
@@ -129,14 +114,12 @@
         background: rgba(255,255,255,.2);
         overflow: hidden;
       }
-
       #${WIDGET_ID}-progress-fill {
         width: 0%;
         height: 100%;
         background: #fff;
         transition: width .2s linear;
       }
-
       #${WIDGET_ID}-time {
         display: flex;
         justify-content: space-between;
@@ -144,24 +127,20 @@
         font-size: 10px;
         opacity: .6;
       }
-
       #${WIDGET_ID}-controls {
         display: grid;
         grid-template-columns: repeat(5, 1fr);
         gap: 7px;
       }
-
       #${WIDGET_ID}-controls button {
         min-height: 48px;
         border-radius: 11px;
         font-size: 20px;
       }
-
       #${WIDGET_ID}-controls .primary {
         font-size: 24px;
         background: rgba(255,255,255,.16);
       }
-
       @media (max-width: 380px) {
         #${PANEL_ID} { width: calc(100vw - 24px); }
         #${WIDGET_ID}-controls { gap: 5px; }
@@ -311,10 +290,11 @@
     play.textContent = state.playbackState === 'playing' ? '❚❚' : '▶';
 
     const playAction = state.playbackState === 'playing' ? 'pause' : 'play';
-    play.onclick = () => {
+    play.onclick = null;
+    play.addEventListener('click', () => {
       execute(playAction);
       setTimeout(update, 80);
-    };
+    }, { once: true });
   }
 
   function start() {
@@ -323,7 +303,7 @@
       return;
     }
     buildWidget();
-    pollTimer = setInterval(update, POLL_MS);
+    setInterval(update, POLL_MS);
   }
 
   start();

@@ -1,6 +1,6 @@
 /**
  * Spotify Web Controls - Content Script Coordinator (Isolated World)
- * 
+ *
  * Injects bridge.js into the MAIN world and facilitates bidirectional communication
  * between the isolated WebExtension world and the page context.
  */
@@ -105,14 +105,27 @@
         sendToBridge('UPDATE_CONFIG', config);
         break;
 
-      case 'TRIGGER_PLAYER_ACTION':
+      case 'TRIGGER_PLAYER_ACTION': {
         log(`Action triggered from bridge: ${payload.action}`);
+        let success = false;
         if (window.__spotifyPlayerController && typeof window.__spotifyPlayerController.executeAction === 'function') {
-          window.__spotifyPlayerController.executeAction(payload.action, payload.details);
+          try {
+            success = window.__spotifyPlayerController.executeAction(payload.action, payload.details) === true;
+          } catch (error) {
+            console.error('[Spotify Controls:MediaSession] Controller execution failed:', error);
+            success = false;
+          }
         } else {
           log('[Spotify Controls] Action not supported or player controller not ready:', payload.action);
         }
+
+        sendToBridge('CONTROLLER_RESULT', {
+          action: payload.action,
+          success: success
+        });
+        log(`Controller execution result: ${payload.action} => ${success ? 'success' : 'failed'}`);
         break;
+      }
 
       default:
         break;

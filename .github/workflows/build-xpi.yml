@@ -1,0 +1,27 @@
+name: Build Firefox XPI
+
+on:
+  push:
+    branches:
+      - feature/media-session-diagnostics
+  workflow_dispatch:
+
+jobs:
+  build-xpi:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/media-session-diagnostics
+
+      - name: Package extension
+        run: |
+          cd spotify-controls
+          zip -r ../spotify-controls.xpi . -x 'README.md' 'manifest.v2.json'
+
+      - name: Upload XPI
+        uses: actions/upload-artifact@v4
+        with:
+          name: spotify-controls-xpi
+          path: spotify-controls.xpi
+          if-no-files-found: error
